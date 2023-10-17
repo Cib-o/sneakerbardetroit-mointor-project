@@ -24,8 +24,15 @@ const sendWebhook = async (props) => {
     });
     const page = await browser.newPage();
     await page.authenticate({ username, password });
-    await page.goto(link, { timeout: 0 });
-    return [page, browser];
+    try {
+      await page.goto(link, { timeout: 0 });
+      return [page, browser];
+    } catch (error) {
+      await page.close();
+      await browser.close();
+      if (browser && browser.process() != null) browser.process().kill('SIGINT');
+      return [false, false];
+    }
   }
 
   async function checkProduct(page, browser) {
@@ -56,8 +63,8 @@ const sendWebhook = async (props) => {
       }
 
       await axios.post(webHookURL, message)
-        .catch(err => console.error(err));
-    } catch (error) { console.log(error); }
+        .catch(() => { });
+    } catch (error) { }
 
     await page.close();
     await browser.close();
@@ -67,6 +74,7 @@ const sendWebhook = async (props) => {
 
   async function monitor(link) {
     const [page, browser] = await initBrowser(link);
+    if (!page || !browser) return;
     await checkProduct(page, browser);
   }
 
